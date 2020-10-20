@@ -11,7 +11,7 @@ export default class AvatarSelector extends Component{
     constructor(props){
         super(props)
         this.avatarList = Array.from(new Array(20)).map((item,index)=>({
-            icon:require(`./images/${index+1}.png`),
+            icon:require(`../../assets/images/${index+1}.png`),
             text:`头像${index+1}`
         }))
     }

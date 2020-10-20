@@ -1,19 +1,61 @@
 import React, {
     Component
 } from 'react'
+import {NavBar} from 'antd-mobile'
 import {Switch,Route,Redirect} from 'react-router-dom'
 import {connect} from 'react-redux'
 import Cookies from 'js-cookie'
 import VueInfo from '../vue-info/vue-info'
 import ReactInfo from '../react-info/react-info'
+import VueUser from '../vue-user/vue-user'
+import ReactUser from '../react-user/react-user'
+import Message from '../message/message'
+import Personal from '../personal/personal'
+import NotFound from '../../components/not-found/not-found'
+import NavFooter from '../../components/nav-footer/nav-footer'
+
 import {getRedirectTo} from '../../utils/index'
+import {getUser} from '../../redux/actions'
+
 class Main extends Component {
+    navList = [
+        {
+            path:'/vue',
+            component:VueUser,
+            title:'Vue用户列表',
+            icon:'vue',
+            text:'Vue'
+        },
+        {
+            path:'/react',
+            component:ReactUser,
+            title:'React用户列表',
+            icon:'react',
+            text:'React'
+        },
+        {
+            path:'/message',
+            component:Message,
+            title:'消息列表',
+            icon:'message',
+            text:'消息'
+        },
+        {
+            path:'/personal',
+            component:Personal,
+            title:'用户中心',
+            icon:'personal',
+            text:'个人'
+        }
+    ]
+
     componentDidMount(){
         const userid = Cookies.get('userid')
         const {_id} = this.props.user
         if(userid && !_id){
             // 发送异步请求,获取user
-            console.log('发送请求,获取user')
+            // console.log('发送请求,获取user')
+            this.props.getUser()
         }
     }
     render() {
@@ -37,17 +79,32 @@ class Main extends Component {
                 return <Redirect to={path}/>
             }
         }
-        
+
+        const {navList} = this
+        const path = this.props.location.pathname
+        const currentNav = navList.find(nav=>nav.path===path)
+        if(currentNav){
+            if(user.type==='vue'){
+                navList[1].hide = true
+            }else{
+                navList[0].hide = true
+            }
+        }
         return (<div>
+            {currentNav ? <NavBar className='sticky-header'>{currentNav.title}</NavBar> : null}
             <Switch>
+                {navList.map(nav=> <Route path={nav.path} component={nav.component}/>)}
                 <Route path='/vueinfo' component={VueInfo}/>
                 <Route path='/reactinfo' component={ReactInfo}/>
+                <Route component={NotFound}/>
             </Switch>
+            {currentNav ? <NavFooter navList={navList}/> : null}
         </div>)
     }
 }
 export default connect(
-    state=>({user:state.user})
+    state=>({user:state.user}),
+    {getUser}
 )(Main)
 
 /**
