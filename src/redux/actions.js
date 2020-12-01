@@ -1,5 +1,6 @@
-import { reqRegister, reqLogin, reqUpdateUser, reqUser, reqUserList } from '../api/index'
-import { AUTH_SUCCESS, ERROR_MSG, RECEIVE_USER, RESET_USER, RECEIVE_USER_LIST } from './action-types'
+import io from 'socket.io-client'
+import { reqRegister, reqLogin, reqUpdateUser, reqUser, reqUserList, reqChatMsgList, reqReadMsg } from '../api/index'
+import { AUTH_SUCCESS, ERROR_MSG, RECEIVE_USER, RESET_USER, RECEIVE_USER_LIST, RECEIVE_MSG, RECEIVE_MSG_LIST } from './action-types'
 
 //授权同步action
 const authSuccess = (user) => ({ type: AUTH_SUCCESS, data: user })
@@ -11,6 +12,43 @@ const receiveUser = (user) => ({ type: RECEIVE_USER, data: user })
 export const resetUser = (msg) => ({ type: RESET_USER, data: msg })
 //接收用户列表的同步action
 export const receiveUserList = (userList) => ({ type: RECEIVE_USER_LIST, data: userList })
+//接收一个消息的同步action
+const receiveMsg = (chatMsg) => ({ type: RECEIVE_MSG, data: chatMsg })
+//接收消息列表的同步action
+const receiveMsgList = ({ users, chatMsgs }) => ({ type: RECEIVE_MSG_LIST, data: { users, chatMsgs } })
+
+
+function initIO(dispatch, userid) {
+    if (!io.socket) {
+        io.socket = io('ws://localhost:5000')
+        io.socket.on('receiveMsg', function (chatMsg) {
+            console.log('客户端接收服务器发送的消息', chatMsg)
+            if (userid === chatMsg.from || userid === chatMsg.to) {
+                dispatch(receiveMsg(chatMsg))
+            }
+        })
+    }
+}
+
+// 获取消息列表
+async function getMsgList(dispatch, userid) {
+    initIO(dispatch, userid)
+    const response = await reqChatMsgList()
+    const result = response.data
+    if (result.code === 0) {
+        const { users, chatMsgs } = result.data
+        dispatch(receiveMsgList({ users, chatMsgs }))
+    }
+}
+
+// 发送消息的异步action
+export const sendMsg = ({ from, to, content }) => {
+    return dispatch => {
+        console.log('客户端向服务器发送消息', { from, to, content })
+        // 发消息
+        io.socket.emit('sendMsg', { from, to, content })
+    }
+}
 
 //注册异步action
 export const register = (user) => {
@@ -28,6 +66,7 @@ export const register = (user) => {
         console.log(response)
         const result = response.data
         if (result.code === 0) {
+            getMsgList(dispatch, result.data._id)
             dispatch(authSuccess(result.data))
         } else {
             dispatch(errorMsg(result.msg))
@@ -48,6 +87,7 @@ export const login = (user) => {
         const response = await reqLogin(user)
         const result = response.data
         if (result.code === 0) {
+            getMsgList(dispatch, result.data._id)
             dispatch(authSuccess(result.data))
         } else {
             dispatch(errorMsg(result.msg))
@@ -74,6 +114,7 @@ export const getUser = () => {
         const response = await reqUser()
         const result = response.data
         if (result.code === 0) {
+            getMsgList(dispatch, result.data._id)
             dispatch(receiveUser(result.data))
         } else {
             dispatch(resetUser(result.msg))
@@ -92,9 +133,3 @@ export const getUserList = (type) => {
     }
 }
 
-// 发送消息的异步action
-export const sendMsg = ({ from, to, content }) => {
-    return dispatch => {
-        console.log('发送消息', { from, to, content });
-    }
-}

@@ -86,9 +86,9 @@ class Main extends Component {
         const currentNav = navList.find(nav => nav.path === path)
         if (currentNav) {
             if (user.type === 'vue') {
-                navList[1].hide = true
-            } else {
                 navList[0].hide = true
+            } else {
+                navList[1].hide = true
             }
         }
         return (<div>
