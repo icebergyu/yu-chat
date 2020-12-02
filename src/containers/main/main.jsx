@@ -67,7 +67,7 @@ class Main extends Component {
             return <Redirect to='/login' />
         }
         // 如果有读取redux中的user状态
-        const { user } = this.props
+        const { user, unReadCount } = this.props
         // 如果user没有_id,返回null(不作任何显示)
         if (!user._id) {
             return null
@@ -94,19 +94,19 @@ class Main extends Component {
         return (<div>
             {currentNav ? <NavBar className='sticky-header'>{currentNav.title}</NavBar> : null}
             <Switch>
-                {navList.map(nav => <Route path={nav.path} component={nav.component} />)}
+                {navList.map(nav => <Route key={nav.path} path={nav.path} component={nav.component} />)}
                 <Route path='/vueinfo' component={VueInfo} />
                 <Route path='/reactinfo' component={ReactInfo} />
                 <Route path='/chat/:userid' component={Chat} />
 
                 <Route component={NotFound} />
             </Switch>
-            {currentNav ? <NavFooter navList={navList} /> : null}
+            {currentNav ? <NavFooter navList={navList} unReadCount={unReadCount} /> : null}
         </div>)
     }
 }
 export default connect(
-    state => ({ user: state.user }),
+    state => ({ user: state.user, unReadCount: state.chat.unReadCount }),
     { getUser }
 )(Main)
 

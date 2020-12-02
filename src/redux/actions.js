@@ -1,6 +1,6 @@
 import io from 'socket.io-client'
 import { reqRegister, reqLogin, reqUpdateUser, reqUser, reqUserList, reqChatMsgList, reqReadMsg } from '../api/index'
-import { AUTH_SUCCESS, ERROR_MSG, RECEIVE_USER, RESET_USER, RECEIVE_USER_LIST, RECEIVE_MSG, RECEIVE_MSG_LIST } from './action-types'
+import { AUTH_SUCCESS, ERROR_MSG, RECEIVE_USER, RESET_USER, RECEIVE_USER_LIST, RECEIVE_MSG, RECEIVE_MSG_LIST, MSG_READ } from './action-types'
 
 //授权同步action
 const authSuccess = (user) => ({ type: AUTH_SUCCESS, data: user })
@@ -13,10 +13,11 @@ export const resetUser = (msg) => ({ type: RESET_USER, data: msg })
 //接收用户列表的同步action
 export const receiveUserList = (userList) => ({ type: RECEIVE_USER_LIST, data: userList })
 //接收一个消息的同步action
-const receiveMsg = (chatMsg) => ({ type: RECEIVE_MSG, data: chatMsg })
+const receiveMsg = (chatMsg, isToMe) => ({ type: RECEIVE_MSG, data: { chatMsg, isToMe } })
 //接收消息列表的同步action
-const receiveMsgList = ({ users, chatMsgs }) => ({ type: RECEIVE_MSG_LIST, data: { users, chatMsgs } })
-
+const receiveMsgList = ({ users, chatMsgs, userid }) => ({ type: RECEIVE_MSG_LIST, data: { users, chatMsgs, userid } })
+//读取消息的同步action
+const msgRead = ({ count, from, to }) => ({ type: MSG_READ, data: { count, from, to } })
 
 function initIO(dispatch, userid) {
     if (!io.socket) {
@@ -24,7 +25,7 @@ function initIO(dispatch, userid) {
         io.socket.on('receiveMsg', function (chatMsg) {
             console.log('客户端接收服务器发送的消息', chatMsg)
             if (userid === chatMsg.from || userid === chatMsg.to) {
-                dispatch(receiveMsg(chatMsg))
+                dispatch(receiveMsg(chatMsg, userid === chatMsg.to))
             }
         })
     }
@@ -37,7 +38,7 @@ async function getMsgList(dispatch, userid) {
     const result = response.data
     if (result.code === 0) {
         const { users, chatMsgs } = result.data
-        dispatch(receiveMsgList({ users, chatMsgs }))
+        dispatch(receiveMsgList({ users, chatMsgs, userid }))
     }
 }
 
@@ -47,6 +48,18 @@ export const sendMsg = ({ from, to, content }) => {
         console.log('客户端向服务器发送消息', { from, to, content })
         // 发消息
         io.socket.emit('sendMsg', { from, to, content })
+    }
+}
+
+// 读取消息的异步action
+export const readMsg = (from, to) => {
+    return async dispatch => {
+        const response = await reqReadMsg(from)
+        const result = response.data
+        if (result.code === 0) {
+            const count = result.data
+            dispatch(msgRead({ count, from, to }))
+        }
     }
 }
 

@@ -95,6 +95,7 @@
     "customize-cra": "^1.0.0",
     "less": "2.7.3",
     "less-loader": "5",
+    "rc-queue-anim": "^1.8.5",
     "react-app-rewired": "^2.1.6",
     "socket.io": "^2.3.0"
   },

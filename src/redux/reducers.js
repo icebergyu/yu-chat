@@ -6,7 +6,8 @@ import {
     RECEIVE_USER_LIST,
     RESET_USER,
     RECEIVE_MSG,
-    RECEIVE_MSG_LIST
+    RECEIVE_MSG_LIST,
+    MSG_READ
 } from './action-types'
 import { getRedirectTo } from '../utils/index'
 const initUser = {
@@ -44,25 +45,38 @@ function userList(state = initUserList, action) {
 }
 
 const initChat = {
-    users: {}, //userid  {username,header}
+    users: {}, //userid  {username,avatar}
     chatMsgs: [],// 当前用户所有相关的msg数组
     unReadCount: 0 // 总的未读消息数
 }
 function chat(state = initChat, action) {
     switch (action.type) {
         case RECEIVE_MSG_LIST:
-            const { users, chatMsgs } = action.data
+            const { users, chatMsgs, userid } = action.data
             return {
                 users,
                 chatMsgs,
-                unReadCount: 0
+                unReadCount: chatMsgs.reduce((total, msg) => { return total + (!msg.read && msg.to === userid ? 1 : 0) }, 0)
             }
         case RECEIVE_MSG:
-            const chatMsg = action.data
+            const { chatMsg, isToMe } = action.data
             return {
                 users: state.users,
                 chatMsgs: [...state.chatMsgs, chatMsg],
-                unReadCount: 0
+                unReadCount: state.unReadCount + (!chatMsg.read && isToMe ? 1 : 0)
+            }
+        case MSG_READ:
+            const { from, to, count } = action.data
+            return {
+                users: state.users,
+                chatMsgs: state.chatMsgs.map(msg => {
+                    if (msg.from === from && msg.to === to) {
+                        return { ...msg, read: true }
+                    } else {
+                        return msg
+                    }
+                }),
+                unReadCount: state.unReadCount - count
             }
         default:
             return state

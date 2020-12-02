@@ -1,7 +1,8 @@
 import React, { Component } from 'react'
 import { NavBar, InputItem, List, Grid, Icon } from 'antd-mobile'
+import QueueAnim from 'rc-queue-anim';
 import { connect } from 'react-redux'
-import { sendMsg } from '../../redux/actions'
+import { sendMsg, readMsg } from '../../redux/actions'
 
 const Item = List.Item
 class Chat extends Component {
@@ -21,9 +22,18 @@ class Chat extends Component {
     }
     componentDidMount() {
         window.scrollTo(0, document.body.scrollHeight)
+        // 发请求更新未读消息数
+        const from = this.props.match.params.userid
+        const to = this.props.user._id
+        this.props.readMsg(from, to)
     }
     componentDidUpdate() {
         window.scrollTo(0, document.body.scrollHeight)
+    }
+    componentWillUnmount() {
+        const from = this.props.match.params.userid
+        const to = this.props.user._id
+        this.props.readMsg(from, to)
     }
     handleSend = () => {
         // 收集数据
@@ -58,8 +68,8 @@ class Chat extends Component {
         const targetId = this.props.match.params.userid
         const chatId = [meId, targetId].sort().join('_')
         const msgs = chatMsgs.filter(msg => { return msg.chat_id === chatId })
-        const targetHeader = users[targetId].header
-        const targetIcon = targetHeader ? require(`../../assets/images/${targetHeader}.png`) : null
+        const targetAvatar = users[targetId].avatar
+        const targetIcon = targetAvatar ? require(`../../assets/images/${targetAvatar}.png`) : null
         return (
             <div id='chat-page'>
                 <NavBar
@@ -67,17 +77,19 @@ class Chat extends Component {
                     onLeftClick={() => { this.props.history.goBack() }}
                     className='sticky-header'>{users[targetId].username}</NavBar>
                 <List style={{ marginTop: 50, marginBottom: 50 }}>
-                    {msgs.map(msg => {
-                        if (msg.from === targetId) {
-                            return (
-                                <Item key={msg._id} thumb={targetIcon}>{msg.content}</Item>
-                            )
-                        } else {
-                            return (
-                                <Item key={msg._id} className='chat-me' extra='我'>{msg.content}</Item>
-                            )
-                        }
-                    })}
+                    <QueueAnim type='left' delay={100}>
+                        {msgs.map(msg => {
+                            if (msg.from === targetId) {
+                                return (
+                                    <Item key={msg._id} thumb={targetIcon}>{msg.content}</Item>
+                                )
+                            } else {
+                                return (
+                                    <Item key={msg._id} className='chat-me' extra='我'>{msg.content}</Item>
+                                )
+                            }
+                        })}
+                    </QueueAnim>
                 </List>
 
                 <div className='am-tab-bar'>
@@ -107,5 +119,5 @@ class Chat extends Component {
 }
 export default connect(
     state => ({ user: state.user, chat: state.chat }),
-    { sendMsg }
+    { sendMsg, readMsg }
 )(Chat)
